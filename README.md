@@ -32,7 +32,8 @@ Ensure you have the following installed:
 
    ```bash
    npm install
-   ```
+   npm install xlsx
+
 
 ### Configuration
 
@@ -69,27 +70,15 @@ Ensure you have the following installed:
 
 2. **Define Private Keys**:
 
-   - Store your private keys securely inside a `privateKeys.json` file in the root directory. This file should contain an array of private keys as strings:
-
-     ```json
-     [
-         "0xYOUR_PRIVATE_KEY_1",
-         "0xYOUR_PRIVATE_KEY_2"
-     ]
+   -Creare data.xlsx
+    A: Private key
+    B: Addrexx
+    C: Hex data
+ 
      ```
-
-     **⚠️ Important**: Keep this file secure and avoid exposing your private keys!
-
-3. **Create Target Addresses File**:
-
-   - Create an `addresses.json` file in the root directory. This file should contain an array of target addresses you want to transfer funds to:
-
-     ```json
-     [
-         "0xTARGET_ADDRESS_1",
-         "0xTARGET_ADDRESS_2"
-     ]
-     ```
+3. ** change
+    const contractAddress = "0x85F85B90783E5C2E59b785458143d08De959b4e9" to contract
+    gasLimit: 1121000
 
 ### Usage
 

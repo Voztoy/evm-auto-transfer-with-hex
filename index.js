@@ -2,6 +2,7 @@ const { ethers } = require('ethers');
 const colors = require('colors');
 const fs = require('fs');
 const readlineSync = require('readline-sync');
+const xlsx = require('xlsx'); // Thêm thư viện xlsx để đọc Excel
 
 const checkBalance = require('./src/checkBalance');
 const displayHeader = require('./src/displayHeader');
@@ -15,6 +16,7 @@ const {
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 5000;
 
+// Hàm retry để thử lại khi gặp lỗi
 async function retry(fn, maxRetries = MAX_RETRIES, delay = RETRY_DELAY) {
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -29,6 +31,7 @@ async function retry(fn, maxRetries = MAX_RETRIES, delay = RETRY_DELAY) {
   }
 }
 
+// Hàm chính
 const main = async () => {
   displayHeader();
 
@@ -42,13 +45,17 @@ const main = async () => {
 
   const provider = new ethers.JsonRpcProvider(selectedChain.rpcUrl);
 
-  const privateKeys = JSON.parse(fs.readFileSync('privateKeys.json'));
+  // Đọc file Excel và lấy dữ liệu từ các cột
+  const workbook = xlsx.readFile('data.xlsx');
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const data = xlsx.utils.sheet_to_json(sheet, { header: ['privateKey', 'address', 'hexData'], range: 1 });
 
   const transactionCount = readlineSync.questionInt(
     'Enter the number of transactions you want to send for each address: '
   );
 
-  for (const privateKey of privateKeys) {
+  for (const entry of data) {
+    const { privateKey, address, hexData } = entry;
     const wallet = new ethers.Wallet(privateKey, provider);
     const senderAddress = wallet.address;
 
@@ -68,7 +75,7 @@ const main = async () => {
       continue;
     }
 
-    if (senderBalance < ethers.parseUnits('0.0001', 'ether')) {
+    if (senderBalance < ethers.parseUnits('0.000', 'ether')) {
       console.log(
         colors.red('❌ Insufficient or zero balance. Skipping to next address.')
       );
@@ -107,25 +114,16 @@ const main = async () => {
 
     printSenderBalance();
 
+    let nonce = await provider.getTransactionCount(wallet.address, 'pending');
+
     for (let i = 1; i <= transactionCount; i++) {
-      const receiverWallet = ethers.Wallet.createRandom();
-      const receiverAddress = receiverWallet.address;
+      const contractAddress = "0x85F85B90783E5C2E59b785458143d08De959b4e9";
+      const receiverAddress = contractAddress;
       console.log(
-        colors.white(`\n🆕 Generated address ${i}: ${receiverAddress}`)
+        colors.white(`\n💼 Sending to contract address: ${receiverAddress}`)
       );
 
-      const amountToSend = ethers.parseUnits(
-        (Math.random() * (0.0000001 - 0.00000001) + 0.00000001)
-          .toFixed(10)
-          .toString(),
-        'ether'
-      );
-
-      /* --------------------------- TEMPORARY DISABLED --------------------------- */
-      // const gasPrice = ethers.parseUnits(
-      //   (Math.random() * (0.0015 - 0.0009) + 0.0009).toFixed(9).toString(),
-      //   'gwei'
-      // );
+      const amountToSend = ethers.parseUnits('0', 'ether');
 
       let gasPrice;
       try {
@@ -140,9 +138,11 @@ const main = async () => {
       const transaction = {
         to: receiverAddress,
         value: amountToSend,
-        gasLimit: 21000,
+        data: hexData, // Sử dụng hexData từ file Excel
+        gasLimit: 1121000,
         gasPrice: gasPrice,
         chainId: parseInt(selectedChain.chainId),
+        nonce: nonce + i - 1,
       };
 
       let tx;
@@ -174,7 +174,7 @@ const main = async () => {
         )
       );
 
-      await sleep(15000);
+      await sleep(500);
 
       let receipt;
       try {
